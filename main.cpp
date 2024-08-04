@@ -44,7 +44,6 @@ bool supported_command_check(std::string &command) {
 bool check_builtin_command(std::string &command) {
     for (int i = 0; i < 1; i++) {
         if (builtin_commands[i] == command) {
-            std::cout << "Exiting sidsh. Autobots roll out!" << std::endl;
             return true;
         }
     }
@@ -52,7 +51,7 @@ bool check_builtin_command(std::string &command) {
 }
 
 void handle_builtin_command(std::vector<char *> &c_args) {
-    if (c_args[0] == "exit") {
+    if (strncmp(c_args[0], "exit", 2) == 0) {
         for (char *c_arg : c_args) {
             free(c_arg);
         }
