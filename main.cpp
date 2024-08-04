@@ -54,39 +54,41 @@ bool check_builtin_command(std::string &command) {
     return false;
 }
 
-int sidsh_cd(std::vector<char *> &c_args) {
+int sidsh_cd(std::vector<std::string> &args) {
     std::string home = getenv("HOME");
-    if (c_args.size() == 2) {
+    if (args.size() == 1) {
         if (chdir(home.c_str()) != 0) {
             std::cerr << "sidsh: cd: " << home << ": " << strerror(errno) << std::endl;
         }
-    } else if (c_args.size() > 3) {
+    } else if (args.size() > 2) {
         std::cerr << "sidsh: cd: too many arguments" << std::endl;
     } else {
-        if (chdir(c_args[1]) != 0) {
-            std::cerr << "sidsh: cd: " << c_args[1] << ": " << strerror(errno) << std::endl;
+        if (chdir(args[1].c_str()) != 0) {
+            std::cerr << "sidsh: cd: " << args[1] << ": " << strerror(errno) << std::endl;
         }
-    }
-    for (char *c_arg : c_args) {
-        free(c_arg);
     }
     return 1;
 }
 
-void handle_builtin_command(std::vector<char *> &c_args) {
+void handle_builtin_command(std::vector<std::string> &args) {
     int status = 1;
-    if (strncmp(c_args[0], "exit", 2) == 0) {
-        for (char *c_arg : c_args) {
-            free(c_arg);
-        }
+    if (strncmp(args[0].c_str(), "exit", 2) == 0) {
         std::cout << "Exiting sidsh. Autobots roll out!" << std::endl;
         exit(0);
-    } else if (strncmp(c_args[0], "cd", 2) == 0) {
-        status = sidsh_cd(c_args);
+    } else if (strncmp(args[0].c_str(), "cd", 2) == 0) {
+        status = sidsh_cd(args);
     }
 }
 
 int sidsh_execute(std::vector<std::string> &args) {
+    // check if the command to be executed is builtin command
+    bool is_builtin_command = check_builtin_command(args[0]);
+
+    if (is_builtin_command) {
+        handle_builtin_command(args);
+        return 1; // TODO: different return value for builtin commands based on the execution status
+    }
+
     // https://stackoverflow.com/questions/28733026/how-to-use-exec-to-execute-commands-in-c-and-linux
     // Convert std::vector<std::string> to char*[]
     std::vector<char *> c_args;
@@ -97,14 +99,6 @@ int sidsh_execute(std::vector<std::string> &args) {
 
     pid_t pid;
     int status;
-
-    // check if the command to be executed is builtin command
-    bool is_builtin_command = check_builtin_command(args[0]);
-
-    if (is_builtin_command) {
-        handle_builtin_command(c_args);
-        return 1; // TODO: different return value for builtin commands based on the execution status
-    }
 
     pid = fork();
 
