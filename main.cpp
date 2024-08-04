@@ -7,24 +7,14 @@
 #include <unistd.h>
 #include <vector>
 
-int no_of_supported_commands = 5;
-std::string supported_commands[5] = {"cd", "help", "exit", "ls", "cat"};
-
-// int sidsh_cd(std::vector<std::string>);
-// int sidsh_help(std::vector<std::string>);
-// int sidsh_exit(std::vector<std::string>);
-
-// int (*builtin_func[]) (std::vector<std::string>) = {
-//   &sidsh_cd,
-//   &sidsh_help,
-//   &sidsh_exit
-// };
-
-// 1
+const int no_of_supported_commands = 8;
+std::string supported_commands[no_of_supported_commands] = {"cd", "help", "exit", "ls", "cat", "who", "pwd", "whoami"};
+std::string builtin_commands[1] = {"exit"};
 
 // can use "strtok" for this
 // TODO: taking into account quotes and escape characters
-std::vector<std::string> sidsh_getargs(std::string line, std::string delimiter = " ") {
+std::vector<std::string>
+sidsh_getargs(std::string line, std::string delimiter = " ") {
     std::vector<std::string> tokens;
     size_t pos = 0;
     std::string token;
@@ -51,6 +41,26 @@ bool supported_command_check(std::string &command) {
     return false;
 }
 
+bool check_builtin_command(std::string &command) {
+    for (int i = 0; i < 1; i++) {
+        if (builtin_commands[i] == command) {
+            std::cout << "Exiting sidsh. Autobots roll out!" << std::endl;
+            return true;
+        }
+    }
+    return false;
+}
+
+void handle_builtin_command(std::vector<char *> &c_args) {
+    if (c_args[0] == "exit") {
+        for (char *c_arg : c_args) {
+            free(c_arg);
+        }
+        std::cout << "Exiting sidsh. Autobots roll out!" << std::endl;
+        exit(0);
+    }
+}
+
 int sidsh_execute(std::vector<std::string> &args) {
     // https://stackoverflow.com/questions/28733026/how-to-use-exec-to-execute-commands-in-c-and-linux
     // Convert std::vector<std::string> to char*[]
@@ -63,27 +73,35 @@ int sidsh_execute(std::vector<std::string> &args) {
     pid_t pid;
     int status;
 
+    // check if the command to be executed is builtin command
+    bool is_builtin_command = check_builtin_command(args[0]);
+
+    if (is_builtin_command) {
+        handle_builtin_command(c_args);
+        return 1; //TODO: different return value for builtin commands based on the execution status
+    }
+
     pid = fork();
 
     if (pid == 0) { // CHILD PROCESS
         // man execvp
-        // RETURN VALUES 
+        // RETURN VALUES
         //     If any of the
         //     exec() functions returns,
         //     an error will have occurred.The return value is - 1, and the global variable errno will be set to indicate the error
 
         if (execvp(c_args[0], c_args.data()) == -1) {
-
-            std::cerr << strerror(errno) << std::endl;
+            std::cerr << "sidsh: " << args[0] << ": " << strerror(errno) << std::endl;
         }
         // need to free the duplicated strings in child process
         for (char *c_arg : c_args) {
             free(c_arg);
         }
         exit(EXIT_FAILURE); // Exit child process if execvp fails
-    } else if (pid < 0) {// ERROR FORKING
+    } else if (pid < 0) {   // ERROR FORKING
         // FORK will also set global variable errno
-        std::cerr << strerror(errno) << std::endl;
+        std::cerr << "sidsh: " << strerror(errno) << std::endl;
+
     } else {
         // PARENT PROCESS
         do {
