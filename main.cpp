@@ -7,9 +7,10 @@
 #include <unistd.h>
 #include <vector>
 
-const int no_of_supported_commands = 8;
+const int no_of_supported_commands = 9;
 const int no_of_builtin_commands = 2;
-std::string supported_commands[no_of_supported_commands] = {"cd", "help", "exit", "ls", "cat", "who", "pwd", "whoami"};
+std::string supported_commands[no_of_supported_commands] = {"cd", "help", "exit", "ls", "cat", "who", "pwd", "whoami", "clear"};
+//TODO: implement "clear" as a builtin command using ncurses library
 std::string builtin_commands[no_of_builtin_commands] = {"exit", "cd"};
 
 // EXIT: this command is not an executable, it is a shell built-in command
@@ -67,6 +68,11 @@ int sidsh_cd(std::vector<std::string> &args) {
             std::cerr << "sidsh: cd: " << args[1] << ": " << strerror(errno) << std::endl;
         }
     }
+    return 1;
+}
+
+int sidsh_clear(std::vector<std::string> &args){
+    
     return 1;
 }
 
