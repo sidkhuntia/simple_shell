@@ -8,8 +8,12 @@
 #include <vector>
 
 const int no_of_supported_commands = 8;
+const int no_of_builtin_commands = 2;
 std::string supported_commands[no_of_supported_commands] = {"cd", "help", "exit", "ls", "cat", "who", "pwd", "whoami"};
-std::string builtin_commands[1] = {"exit"};
+std::string builtin_commands[no_of_builtin_commands] = {"exit", "cd"};
+
+// EXIT: this command is not an executable, it is a shell built-in command
+// CD: doesnt exit as an executable, beacause a process can only change its own working directory and not of its parent process, we will need to implement cd as a builtin using chdir() system call
 
 // can use "strtok" for this
 // TODO: taking into account quotes and escape characters
@@ -42,21 +46,43 @@ bool supported_command_check(std::string &command) {
 }
 
 bool check_builtin_command(std::string &command) {
-    for (int i = 0; i < 1; i++) {
-        if (builtin_commands[i] == command) {
+    for (int i = 0; i < no_of_builtin_commands; i++) {
+        if (strcmp(builtin_commands[i].c_str(), command.c_str()) == 0) {
             return true;
         }
     }
     return false;
 }
 
+int sidsh_cd(std::vector<char *> &c_args) {
+    std::string home = getenv("HOME");
+    if (c_args.size() == 2) {
+        if (chdir(home.c_str()) != 0) {
+            std::cerr << "sidsh: cd: " << home << ": " << strerror(errno) << std::endl;
+        }
+    } else if (c_args.size() > 3) {
+        std::cerr << "sidsh: cd: too many arguments" << std::endl;
+    } else {
+        if (chdir(c_args[1]) != 0) {
+            std::cerr << "sidsh: cd: " << c_args[1] << ": " << strerror(errno) << std::endl;
+        }
+    }
+    for (char *c_arg : c_args) {
+        free(c_arg);
+    }
+    return 1;
+}
+
 void handle_builtin_command(std::vector<char *> &c_args) {
+    int status = 1;
     if (strncmp(c_args[0], "exit", 2) == 0) {
         for (char *c_arg : c_args) {
             free(c_arg);
         }
         std::cout << "Exiting sidsh. Autobots roll out!" << std::endl;
         exit(0);
+    } else if (strncmp(c_args[0], "cd", 2) == 0) {
+        status = sidsh_cd(c_args);
     }
 }
 
@@ -77,7 +103,7 @@ int sidsh_execute(std::vector<std::string> &args) {
 
     if (is_builtin_command) {
         handle_builtin_command(c_args);
-        return 1; //TODO: different return value for builtin commands based on the execution status
+        return 1; // TODO: different return value for builtin commands based on the execution status
     }
 
     pid = fork();
